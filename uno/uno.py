@@ -26,9 +26,9 @@ deck = [ 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 101, 102, 103, 104, 1
 
 class UnoEnv(gym.Env):
 
-    metadata = {"render_modes": ["human"], "render_fps": 4}
+    metadata = {"render_modes": ["human", "ansi"], "render_fps": 4}
 
-    def __init__(self, render_mode: str = "human"):
+    def __init__(self, render_mode: str = "ansi"):
 
         self.render_mode = render_mode
 
@@ -150,3 +150,5 @@ class UnoEnv(gym.Env):
             print(self.player)
 
             print("--------------------")
+        else:
+            return f"Middle card: {self.middle_card}, Dealer cards: {len(self.dealer)}, Your cards ({len(self.player)}): {self.player}"
