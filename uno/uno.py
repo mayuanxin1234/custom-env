@@ -23,14 +23,22 @@ deck = [ 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 101, 102, 103, 104, 1
         410, 410, 420, 420, 430, 430
         ]
 
+
 class UnoEnv(gym.Env):
+
+    metadata = {"render_modes": ["human"], "render_fps": 4}
 
     def __init__(self, render_mode: str = "human"):
 
         self.render_mode = render_mode
 
         self.observation_space = spaces.Tuple(
-            (spaces.Discrete(44),
+            (   spaces.Box(
+                low=100,
+                high=430,
+                shape=(),
+                dtype=np.int32
+                ),
                 spaces.Box(
                 low=-1,
                 high=430,
@@ -45,9 +53,10 @@ class UnoEnv(gym.Env):
 
     def _get_obs(self):
         player_hand = self.player + [-1] * (108 - len(self.player))
+        player_hand = np.array(player_hand, dtype=np.int32)
 
         return (
-            self.middle_card,
+            np.array(self.middle_card, dtype=np.int32),
             player_hand,
             len(self.dealer)
         )
