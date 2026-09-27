@@ -19,24 +19,18 @@ except Exception as e:
 
 obs, info = env.reset(seed=42)  # Use seed for reproducible testing
 
-print(f"Middle card: {obs[0]}, Number of player cards: {obs[1]}, Number of dealer cards: {obs[2]}")
+print(f"observation: {obs}")
 
 # Test each action type
 actions = [0, 1]  # 0 = play, 1 = draw
 
 for action in actions:
-    old_middle_card = obs[0]
-    old_player_hand = [card for card in obs[1] if card != -1]
-    old_dealer_number = obs[2]
+    old_observation = obs
 
     obs, reward, terminated, truncated, info = env.step(action)
 
-    new_middle_card = obs[0]
-    new_player_hand = [card for card in obs[1] if card != -1]
-    new_dealer_number = obs[2]
+    new_observation = obs
 
     print(f"\nAction {action}:")
-    print(f"  Middle card:  {old_middle_card} -> {new_middle_card}")
-    print(f"  Player hand:  {old_player_hand} -> {new_player_hand}")
-    print(f"  Dealer cards: {old_dealer_number} -> {new_dealer_number}")
+    print(f"  Observation:  {old_observation} -> {new_observation}")
     print(f"  Reward:       {reward}")

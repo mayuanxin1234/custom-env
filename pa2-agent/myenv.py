@@ -28,7 +28,7 @@ deck = [ 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 101, 102, 103, 104, 1
 
 class UnoEnv(gym.Env):
 
-    metadata = {"render_modes": ["human", "ansi"], "render_fps": 4}
+    metadata = {"render_modes": ["ansi"], "render_fps": 4}
 
     def __init__(self, render_mode: str = "ansi"):
 
@@ -55,7 +55,13 @@ class UnoEnv(gym.Env):
 
         return int(state)
     def draw_card(self):
-        return self.deck.pop()
+
+        if (self.deck is None) or (len(self.deck) == 0):
+            self.deck = deck.copy()
+            self.np_random.shuffle(self.deck)
+            return self.deck.pop()
+        else:
+            return self.deck.pop()
 
 
     
@@ -306,3 +312,13 @@ class UnoEnv(gym.Env):
             print("--------------------")
         else:
             return f"Middle card: {self.middle_card}, Dealer cards: {len(self.dealer)}, Your cards ({len(self.player)}): {self.player}"
+
+
+# TODO: name your environment. The id must start with "cs272/" and end with a
+# version, and max_episode_steps must be large enough that a competent agent can
+# finish but small enough that a lost one gives up.
+gym.register(
+    id="cs272/Uno-v0",
+    entry_point="myenv:MyEnv",
+    max_episode_steps=300,
+)
