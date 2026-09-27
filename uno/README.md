@@ -74,6 +74,10 @@ The deck is shuffled randomly at the beginning of each game. Cards drawn from th
 
 No additional information is returned.
 
+## Arguments to 'init()'
+
+There is only one argument to init(), the render mode. The registered environment id is 'Uno-v0'.
+
 ## Version History
 
 * v0: Initial versions release
