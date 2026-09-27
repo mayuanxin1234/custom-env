@@ -22,6 +22,8 @@ The card values are:
 - 4 wild cards (color changing)
 - 4 wild draw 2 cards (color changing)
 
+The card values are encoded as a 3 digit integer with the first digit from the left as the color (1 = red, 2 = blue, 3 = green, 4 = yellow). The 2nd digit from the left is the card type (0 = normal digit cards, 1 = skip, 2 = reverse, 3 = draw two). The third digit is the corresponding numbers, for special card type they are always 0. 500 = wild cards. 600 = wild draw 2 cards.
+
 The player must play a card that is either color matching or number matching to the middle card. 
 
 If the player could not play a card, he must draw a card from the stack and his turn ends. 
@@ -29,6 +31,10 @@ If the player could not play a card, he must draw a card from the stack and his 
 The current logic for the wild card is automatically choosing the color based on the player's most number of color. (we hope to add this action of choosing color in the next iteration)
 
 The game ends when either the dealer or the player has no more cards on their hand anymore.
+
+## Starting state
+
+Each player (dealer and agent) draws 7 cards each and there would be a middle starting card. The player goes first. 
 
 ## Actions
 
@@ -55,10 +61,14 @@ The observation is returned as (numpy.array(), numpy,array(108), int())
 
 ## Episode End
 
-The episode ends if the following happens: 
+The episode ends if one of the following happens: 
 - The player has no more cards left
 - The dealer has no more cards left
 - The stack of cards has run out
+
+## Transition Noise
+
+The deck is shuffled randomly at the beginning of each game. Cards drawn from the deck are random. The player receives a card from the top of the shuffled deck when choosing the draw action. The dealer also draws a top card from the shuffled deck when it does not have a playable card. Draw 2 and wild draw 4 cards cause additional cards from shuffled deck to be drawn. 
 
 ## Information
 
