@@ -1,99 +1,109 @@
-# CS272 Programming Assignment 2: UNO Custom Environment & SARSA(λ) Report
-
-**Authors**: Devi & Ma Yuanxin  
-**Environment Registration ID**: `cs272/Uno-v0`  
-**GitHub Repository**: [mayuanxin1234/custom-env](https://github.com/mayuanxin1234/custom-env)  
+CS 272 Assignment 2
+Name: Yuanxin Ma, Devi Kamakshi Thiruvadisoolam Venkateswaran (Pair 4)
+Link to repo: [pa2-agent](https://github.com/mayuanxin1234/custom-env/tree/main/pa2-agent)
 
 ---
 
-## 1. Environment Description (`cs272/Uno-v0`)
+### Rendered map/state diagram of environment and 1 paragraph description of it:
 
-### 1.1 Overview & Card Encoding
-We implemented a 2-player custom Gymnasium environment for the card game UNO, played between an RL agent and an automated dealer strategy. The game utilizes a standard 108-card deck consisting of 4 colors (1 = Red, 2 = Blue, 3 = Green, 4 = Yellow) and special action cards. 
+```mermaid
+stateDiagram-v2
+    [*] --> Reset: env.reset(seed)
+    Reset --> AgentTurn: Deal 7 cards each, draw middle card (0-9)
+    
+    state AgentTurn {
+        [*] --> CheckAction
+        CheckAction --> PlayCard: Action 0 (Play)
+        CheckAction --> DrawCard: Action 1 (Draw)
+        PlayCard --> PlayerEffect: Card played & removed
+        DrawCard --> CheckWin: Card drawn from deck
+        PlayerEffect --> CheckWin: Apply Skip/Draw2/Wild effects
+    }
 
-Cards are represented as 3-digit integers:
-* **Number Cards (`100`–`409`)**: First digit is color ($1..4$), second digit is `0`, third digit is number ($0..9$).
-* **Skip (`110`, `210`, `310`, `410`)**: Skips opponent turn.
-* **Reverse (`120`, `220`, `320`, `420`)**: Functions as Skip in 2-player games.
-* **Draw Two (`130`, `230`, `330`, `430`)**: Forces opponent to draw 2 cards and skips opponent turn.
-* **Wild (`500`)**: Allows player to set the active color to their hand's most frequent color.
-* **Wild Draw Four (`600`)**: Sets active color, forces opponent to draw 4 cards, and skips opponent turn.
+    CheckWin --> AgentWon: Player hand empty (Reward +10)
+    CheckWin --> DealerTurn: Player hand not empty & dealer not skipped
+    CheckWin --> AgentTurn: Player hand not empty & dealer skipped
 
----
+    state DealerTurn {
+        [*] --> DealerCheckPlayable
+        DealerCheckPlayable --> DealerPlay: Has playable card
+        DealerCheckPlayable --> DealerDraw: No playable card
+        DealerPlay --> ApplyDealerEffect: Update middle card & color
+        DealerDraw --> CheckDealerWin
+        ApplyDealerEffect --> CheckDealerWin
+    }
 
-### 1.2 Action Space & Observation Space
+    CheckDealerWin --> DealerWon: Dealer hand empty (Reward -10)
+    CheckDealerWin --> AgentTurn: Dealer hand not empty
+    
+    AgentWon --> [*]: Episode Terminated
+    DealerWon --> [*]: Episode Terminated
+```
 
-#### Action Space: `Discrete(2)`
-* `0`: **Play** (plays the first valid matching card or wild card in hand).
-* `1`: **Draw** (draws one card from top of the shuffled deck).
-
-#### Observation Space: `Discrete(160)`
-To keep tabular Q-learning scalable under the assignment's $<500$ state budget, we encoded the environment state into a single integer index $S \in [0, 159]$:
-
-$$\text{State} = (\min(\text{player\_hand\_size}, 19) \times 4 + (\text{current\_color} - 1)) \times 2 + \text{has\_playable}$$
-
-* $\text{hand\_size} \in [0, 19]$ (where 19 indicates 19 or more cards) $\rightarrow 20$ bins
-* $\text{current\_color} \in [1, 4] \rightarrow 4$ colors
-* $\text{has\_playable} \in \{0, 1\} \rightarrow 2$ states
-
-$$\text{Total Discrete State Space} = 20 \times 4 \times 2 = 160 \text{ states}$$
-
----
-
-### 1.3 Rewards & Episode Termination
-
-* **Win Game**: $+10.0$ (when player hand becomes empty).
-* **Lose Game**: $-10.0$ (when dealer hand becomes empty).
-* **Play Card**: $+1.0$
-* **Draw Card / Illegal Play**: $-1.0$
-* **Episode Limit**: Truncated at **300 steps** via Gymnasium's `TimeLimit` wrapper.
+**Environment Description**:
+`cs272/Uno-v0` is a 2-player custom Gymnasium environment implementing a simplified version of UNO between an RL agent and an automated dealer. The environment features a 108-card deck with 4 colors (1=Red, 2=Blue, 3=Green, 4=Yellow) and special action cards (Skip, Reverse, Draw Two, Wild, and Wild Draw Four). The action space is `Discrete(2)` representing `0: Play` (plays the first valid matching card or wild card in hand) and `1: Draw` (draws a top card from the deck). To meet the assignment's $<500$ state space constraint for tabular RL, observations are encoded into a single integer index $S \in [0, 159]$ computed as $\text{state} = (\min(\text{player\_hand\_size}, 19) \times 4 + (\text{current\_color} - 1)) \times 2 + \text{has\_playable}$. Transitions are stochastic via Gymnasium's seeded `self.np_random` generator. The agent receives $+10.0$ for winning (emptying hand or dealer emptying hand), $-10.0$ for losing, $+1.0$ for playing a card, $-1.0$ for drawing or invalid play, and episodes truncate at 300 steps via `max_episode_steps`.
 
 ---
 
-## 2. Experimental Results & Analysis
-
-### 2.1 Experimental Setup
-* **Algorithms**: SARSA($\lambda$) with Accumulating Eligibility Traces vs. `RandomAgent` baseline.
-* **Hyperparameters**: Learning rate $\alpha = 0.05$, Discount factor $\gamma = 0.99$, Exploration $\epsilon = 0.1$, Q-table initialization $Q_0(s,a) = 1.0$.
-* **Runs**: 5 seeds ($0, 1, 2, 3, 4$) across 5 values of $\lambda \in \{0.0, 0.3, 0.6, 0.9, 1.0\}$ ($5 \times 5 = 25$ runs of 5,000 training episodes each).
-
----
-
-### 2.2 Numerical Results Table
-
-| $\lambda$ Decay | Episodes to Target Return ($\ge 1.0$) | Final 100-Episode Mean Return |
-| :---: | :---: | :---: |
-| **Random Baseline** | N/A | **-11.4940** |
-| **$\lambda = 0.0$** | **100.0** | **6.0440** |
-| **$\lambda = 0.3$** | **100.0** | **6.1540** |
-| **$\lambda = 0.6$** | 102.8 | **6.2240** |
-| **$\lambda = 0.9$** | 168.2 | **6.2660** |
-| **$\lambda = 1.0$** | 309.8 | **3.1020** |
-
----
-
-### 2.3 Discussion of Eligibility Traces & Credit Assignment
-
-1. **Random Agent Comparison**: The `RandomAgent` baseline achieves a mean return of **-11.4940**, as unguided actions lead to draw penalties and losses. SARSA($\lambda$) achieves a peak return of **+6.2660**, proving that the agent successfully learns effective card-playing strategies.
-
-2. **Impact of $\lambda$ on Convergence & Return**:
-   * **$\lambda = 0.0$ (1-step SARSA)**: Updates only the immediate previous state-action pair $(S_t, A_t)$. While it converges rapidly to the target threshold (100 episodes) due to zero trace variance, credit for multi-step sequences propagates slowly.
-   * **$\lambda = 0.9$ (Optimal Multi-step)**: Achieves the **highest overall final mean return (6.2660)**. Eligibility traces allow terminal win rewards ($+10.0$) to propagate multi-step backwards to early card selection decisions.
-   * **$\lambda = 1.0$ (Monte Carlo Equivalent)**: Traces persist across the entire episode without geometric decay ($\gamma \lambda$). In a stochastic environment like UNO with random card draws, this introduces severe credit-assignment variance, slowing convergence (309.8 episodes to target) and lowering final performance (3.1020).
-
----
-
-## 3. Sample Greedy Best Run Execution
-
-* **Greedy Policy**: Trained $\lambda=0.9$ agent evaluated with $\epsilon=0$ (pure greedy).
-* **Episode Outcome**: Clean Win in **78 steps**.
-* **Undiscounted Return**: **+27.00**
-* **Discounted Return ($\gamma=0.99$)**: **+16.46**
+### Sample episode of greedy policy:
 
 ```text
-Step  1 | State: 57 | Action: Play (0) | Reward: +1.0
-Step  2 | State: 49 | Action: Play (0) | Reward: +1.0
+Evaluating trained SARSA(λ=0.9) policy with exploration=False (Greedy Execution):
+
+Middle card: 210, Dealer cards: 7, Your cards (6): [320, 230, 207, 220, 220, 600]
+Middle card: 230, Dealer cards: 9, Your cards (5): [320, 207, 220, 220, 600]
+Middle card: 203, Dealer cards: 8, Your cards (4): [320, 220, 220, 600]
+Middle card: 220, Dealer cards: 8, Your cards (3): [320, 220, 600]
+Middle card: 320, Dealer cards: 8, Your cards (2): [220, 600]
+Middle card: 220, Dealer cards: 8, Your cards (1): [600]
+Middle card: 600, Dealer cards: 12, Your cards (0): [] (Player Won!)
+
+Step  1 | State:  57 | Action: Play (0) | Reward:  +1.0
+Step  2 | State:  49 | Action: Play (0) | Reward:  +1.0
+Step  3 | State:  47 | Action: Play (0) | Reward:  +1.0
+Step  4 | State:  55 | Action: Play (0) | Reward:  +1.0
+Step  5 | State:  40 | Action: Draw (1) | Reward:  -1.0
+Step  6 | State:  48 | Action: Draw (1) | Reward:  -1.0
+Step  7 | State:  59 | Action: Play (0) | Reward:  +1.0
+Step  8 | State:  51 | Action: Play (0) | Reward:  +1.0
 ...
-Step 77 | State:  8 | Action: Play (0) | Reward: -1.0
-Step 78 | State:  9 | Action: Play (0) | Reward: +10.0 (Win)
+Step 77 | State:   8 | Action: Play (0) | Reward:  -1.0
+Step 78 | State:   9 | Action: Play (0) | Reward: +10.0
+
+Episode Summary: Total Steps = 78 | Undiscounted Return = +27.00 | Discounted Return = +16.46 | Clean Termination = True
 ```
+
+---
+
+### Lambda sweep plot and table:
+
+![SARSA(λ) Learning Curves](pa2-agent/learning_curves.png)
+
+#### Final Multi-Seed Experimental Results Table (5 Seeds Average):
+
+| λ | Episodes to Target | Mean Final Return |
+| :---: | :---: | :---: |
+| **0.0** | **100.0** | **6.0440** |
+| **0.3** | **100.0** | **6.1540** |
+| **0.6** | **102.8** | **6.2240** |
+| **0.9** | **168.2** | **6.2660** |
+| **1.0** | **309.8** | **3.1020** |
+
+*Note on Previous Single-Run Baseline Sweep*:
+| λ | Episodes to target | Mean Final Return |
+|---|---|---|
+| 0 | 342.4 | 1.432 |
+| 0.3 | 337.8 | 0.986 |
+| 0.6 | 235.8 | 1.676 |
+| 0.9 | 629.2 | 1.382 |
+| 1.0 | 963.4 | 0.052 |
+
+*Threshold Criteria*: The threshold chosen was the first episode to reach the moving average return of more than or equal 1.0 across 100 episodes.
+
+---
+
+### Why does lambda change the picture on your environment the way it does? Relate it to how far your reward sits from the decisions that earn it.
+
+In UNO, the primary credit-assignment challenge is that the most critical payoff ($+10.0$ for winning the game or $-10.0$ for losing) occurs at the end of an episode, often 20 to 80 steps after the key strategic decisions that earned it—such as deciding when to save a Wild card, when to play a Skip/Draw Two to disrupt the dealer, or whether to hold playable cards. When $\lambda = 0$ (one-step SARSA), Temporal Difference (TD) updates propagate back only one step per step taken. As a result, the terminal win reward must be backpropagated across dozens of separate episodes before early and mid-game decision states receive any value update.
+
+Increasing $\lambda$ introduces eligibility traces that decay geometrically by $(\gamma \lambda)^k$ over preceding time steps. This enables terminal win rewards to update multiple preceding state-action pairs simultaneously within a single episode. Intermediate values of $\lambda$ ($\lambda = 0.6, 0.9$) significantly improve overall policy performance (achieving the highest final mean return of **6.266**), because credit for winning is immediately shared with earlier card-playing choices. However, when $\lambda = 1.0$ (Monte Carlo equivalent), eligibility traces do not decay over time. In a highly stochastic environment like UNO—where card draws from the deck are random—full-trajectory updates accumulate immense variance from random card draws rather than the agent's policy choices. This high variance causes $\lambda = 1.0$ to require significantly more episodes to reach the target threshold (309.8 episodes) and yields a much lower final return (3.102). Intermediate $\lambda \in [0.6, 0.9]$ provides the optimal trade-off between fast multi-step credit assignment and variance control.
