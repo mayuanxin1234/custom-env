@@ -1,85 +1,46 @@
-# UNO
+# UNO Environment (`cs272/Uno-v0`)
 
-This is a simplified UNO game supporting 2 players (user and the dealer) and UNO! (shout when you have 1 card left or face a penalty) feature coming soon.
+This is a custom 2-player UNO environment for Gymnasium.
 
-|                   |                                   |
-|-------------------|-----------------------------------|
-| Make              | gymnasium.make("test/Uno-v0")    |
-| Action Space      | Discrete(2)                      |
-| Observation Space | Discrete(160) |
-
-UNO is a card game where the goal is to get rid of all your cards first, with each player starting with 7 cards each. 
+| Property | Value |
+|---|---|
+| Registration ID | `cs272/Uno-v0` |
+| Action Space | `Discrete(2)` |
+| Observation Space | `Discrete(160)` |
 
 ## Description
 
-The game starts with each player drawing 7 cards and there will be a middle starting card. All cards are drawn without replacement from a deck of 108 cards. The player goes first. There are 4 possible card colors (red, green, blue, yellow).
+The game starts with each player drawing 7 cards from a shuffled 108-card deck. The player goes first.
 
-The card values are: 
-
-- 1 set of cards numbered 0 - 9 (4 * each color)
-- 1 set of cards numbered 1 - 9 (4 * each color)
-- 1 set of wild cards (skip, reverse, draw 2) (4 * each color)
-- 4 wild cards (color changing)
-- 4 wild draw 2 cards (color changing)
-
-The card values are encoded as a 3 digit integer with the first digit from the left as the color (1 = red, 2 = blue, 3 = green, 4 = yellow). The 2nd digit from the left is the card type (0 = normal digit cards, 1 = skip, 2 = reverse, 3 = draw two). The third digit is the corresponding numbers, for special card type they are always 0. 500 = wild cards. 600 = wild draw 2 cards.
-
-The player must play a card that is either color matching or number matching to the middle card. 
-
-If the player could not play a card, he must draw a card from the stack and his turn ends. 
-
-The current logic for the wild card is automatically choosing the color based on the player's most number of color. (we hope to add this action of choosing color in the next iteration)
-
-The game ends when either the dealer or the player has no more cards on their hand anymore.
-
-## Starting state
-
-Each player (dealer and agent) draws 7 cards each and there would be a middle starting card. The player goes first. 
+Card values are encoded as 3-digit integers:
+- `100` to `409`: Standard number cards (1st digit = color: 1=Red, 2=Blue, 3=Green, 4=Yellow).
+- `x10`: Skip card
+- `x20`: Reverse card (acts as Skip in 2-player mode)
+- `x30`: Draw Two card
+- `500`: Wild card (color change)
+- `600`: Wild Draw Four card (color change + draw 4 + skip opponent)
 
 ## Actions
 
-The action space is (1,) in the range {0,1} indicating whether to play or draw.
-
-- 0: Draw
-- 1: Play
+The action space is `Discrete(2)`:
+- `0`: **Play** (Play the first playable card in hand matching middle card color/type or wild card)
+- `1`: **Draw** (Draw a card from top of shuffled deck)
 
 ## Observations
 
-The obseraction space consists of a discrete value of 160 total possible observation space.
+Discrete state index in range `[0, 159]`:
+$$\text{state} = (\min(\text{player\_hand\_size}, 19) \times 4 + (\text{current\_color} - 1)) \times 2 + \text{has\_playable}$$
 
-The observation is caluclated as the total hand size of the player (maximum 20), the color of the middle card (4 possible colors) and whether the player has a playable card for the middle card (2 conditions possible). They are being multiplied with 4 and 2 to ensure that the states observed do not overlap with different combinations of the above 3 conditions captured.
+Total states: $20 \times 4 \times 2 = 160$. Hand size 19 represents 19 or more cards.
 
-The observation is returned as int()
+## Rewards
 
-Note: Our original implementation encompassed having the current middle card, the deck of player's card, and the number of dealer cards. However, due to the assignment limiting factor of less than 500 observation space, we had to change our observation to the above. 
-
-### Reward
-
-- Win game: +10
-- Lose game: -10
-- Draw card: -1
-- Play card: +1
-- Skip player: 0
+- **Win Game**: $+10.0$
+- **Lose Game**: $-10.0$
+- **Play Card**: $+1.0$
+- **Draw Card**: $-1.0$
 
 ## Episode End
 
-The episode ends if one of the following happens: 
-- The player has no more cards left
-- The dealer has no more cards left
-- The stack of cards has run out
-
-## Transition Noise
-
-The deck is shuffled randomly at the beginning of each game. Cards drawn from the deck are random. The player receives a card from the top of the shuffled deck when choosing the draw action. The dealer also draws a top card from the shuffled deck when it does not have a playable card. Draw 2 and wild draw 4 cards cause additional cards from shuffled deck to be drawn. 
-
-## Information
-
-No additional information is returned.
-
-## Arguments to 'init()'
-
-There is only one argument to init(), the render mode. The registered environment id is 'Uno-v0'.
-
-## Version History
-
-* v0: Initial versions release
+- **Terminated**: Player or dealer hand becomes empty.
+- **Truncated**: Step count reaches 300 (`max_episode_steps=300`).
