@@ -38,12 +38,12 @@ Cards are encoded as 3-digit integers:
 
 The observation space is represented by an integer state index $S \in [0, 159]$, calculated as:
 
-$$\text{state} = (\text{hand\_size} \times 4 + \text{color}) \times 2 + \text{has\_playable}$$
+$$\text{State} = (\text{Hand Size} \times 4 + \text{Color}) \times 2 + \text{Has Playable}$$
 
 Where:
-- $\text{hand\_size} = \min(\text{len}(\text{player\_hand}), 19) \in [0, 19]$ (where 19 represents 19 or more cards).
-- $\text{color} = \text{current\_color} - 1 \in [0, 3]$ (0 = Red, 1 = Blue, 2 = Green, 3 = Yellow).
-- $\text{has\_playable} \in \{0, 1\}$ (1 if the agent holds at least one matching or wild card, else 0).
+- $\text{Hand Size} = \min(\text{Player Cards}, 19) \in [0, 19]$ (where 19 represents 19 or more cards).
+- $\text{Color} = \text{Current Color} - 1 \in [0, 3]$ (0 = Red, 1 = Blue, 2 = Green, 3 = Yellow).
+- $\text{Has Playable} \in \{0, 1\}$ (1 if the agent holds at least one matching or wild card, else 0).
 
 $$\text{Total States} = 20 \times 4 \times 2 = 160$$
 

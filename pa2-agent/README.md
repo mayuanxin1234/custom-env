@@ -29,7 +29,7 @@ The action space is `Discrete(2)`:
 ## Observations
 
 Discrete state index in range `[0, 159]`:
-$$\text{state} = (\min(\text{player\_hand\_size}, 19) \times 4 + (\text{current\_color} - 1)) \times 2 + \text{has\_playable}$$
+$$\text{State} = (\min(\text{Hand Size}, 19) \times 4 + (\text{Color} - 1)) \times 2 + \text{Has Playable}$$
 
 Total states: $20 \times 4 \times 2 = 160$. Hand size 19 represents 19 or more cards.
 
